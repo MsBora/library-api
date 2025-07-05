@@ -2,12 +2,13 @@ package main
 
 import (
 	"fmt"
-	"library-api/storage"
 	"library-api/handlers"
+	"library-api/storage"
 	"log"
 	"net/http"
 	"os"
-	
+	"time"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/joho/godotenv"
@@ -44,10 +45,26 @@ func main() {
 	)
 
 	fmt.Println("-----Initializing Storage --------")
-	store, err := storage.NewStorage(connStr)
-	if err != nil {
-		log.Fatal("failed to initialize storage: %v", err)
+	var store *storage.Storage
+	err = nil
+	maxRetries, i := 5, 0
+	for i < maxRetries {
+		store, err = storage.NewStorage(connStr)
+
+		if err == nil {
+			break
+		}
+
+		log.Printf("failed to connect database, retrying in 5 seconds... (%d/%d)", i+1, maxRetries)
+		time.Sleep(5 * time.Second)
+
+		i++
 	}
+
+	if err != nil {
+		log.Fatalf("failed to initialize database after %d retries: %v", i-1, err)
+	}
+	
 
 	defer store.Close()
 	log.Println("storage initialized successfully.")
